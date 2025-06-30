@@ -78,7 +78,6 @@ COPY --from=builder /var/www/html .
 # Copy Nginx, PHP-FPM, and startup script configurations
 # Pastikan path ini benar di repository Anda
 COPY .docker/nginx.conf /etc/nginx/nginx.conf
-COPY .docker/php-fpm.conf /usr/local/etc/php-fpm.d/www.conf
 COPY .docker/start.sh /usr/local/bin/start.sh
 RUN chmod +x /usr/local/bin/start.sh
 
