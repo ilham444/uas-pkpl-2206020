@@ -4,27 +4,26 @@ FROM php:8.2-fpm-alpine AS builder
 
 WORKDIR /var/www/html
 
-# Install build-time system dependencies
-# Menambahkan gmp-dev untuk ekstensi gmp
-RUN apk add --no-cache \
-    build-base \
-    curl \
-    unzip \
-    zip \
-    # Dependensi untuk ekstensi PHP
-    libzip-dev \
-    libpng-dev \
-    jpeg-dev \
-    freetype-dev \
-    gmp-dev \
-    # Dependensi untuk Node.js & NPM
-    nodejs-lts \
-    npm
+# ==============================================================================
+# === TAHAP INSTALASI DEPENDENSI DAN EKSTENSI YANG DIROMBAK ===
+# ==============================================================================
+
+# Definisikan dependensi build dan runtime dalam variabel agar mudah dikelola
+ARG PHPIZE_DEPS="autoconf dpkg-dev dpkg file g++ gcc libc-dev make pkgconf re2c"
+ARG BUILD_DEPS="curl unzip zip libzip-dev libpng-dev jpeg-dev freetype-dev gmp-dev nodejs-lts npm"
+
+# Install semua dependensi sistem (build + runtime)
+RUN apk add --no-cache --virtual .build-deps $PHPIZE_DEPS $BUILD_DEPS && \
+    apk add --no-cache gmp libpng jpeg freetype libzip
 
 # Install PHP extensions
-# Menambahkan gmp
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install -j$(nproc) gd pdo pdo_mysql zip gmp bcmath opcache
+    && docker-php-ext-install -j$(nproc) pdo pdo_mysql gd zip gmp bcmath opcache
+
+# Hapus dependensi build yang tidak diperlukan lagi untuk mengurangi ukuran layer
+# RUN apk del .build-deps
+
+# ==============================================================================
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
@@ -61,7 +60,6 @@ FROM php:8.2-fpm-alpine
 WORKDIR /var/www/html
 
 # Install only necessary RUNTIME system dependencies
-# Menambahkan gmp
 RUN apk add --no-cache \
     nginx \
     libzip \
