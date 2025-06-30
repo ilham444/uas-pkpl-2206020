@@ -28,7 +28,7 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 # Copy & build frontend assets
 COPY package.json package-lock.json ./
-RUN npm install && npm run build
+RUN NODE_OPTIONS=--max-old-space-size=4096 npm install && npm run build
 
 # Copy & install backend dependencies
 COPY composer.json composer.lock ./
