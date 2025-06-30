@@ -24,6 +24,9 @@ jobs:
       - name: Generate key
         run: php artisan key:generate
       - name: Run unit tests
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ':memory:'
         run: php artisan test
 
       # Langkah 3: Login ke Docker Hub
