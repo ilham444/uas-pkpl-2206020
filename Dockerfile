@@ -40,7 +40,13 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Copy & build frontend assets
 COPY package.json package-lock.json ./
 RUN npm ci
-RUN npm run build
+
+# ==============================================================================
+# === PERBAIKAN DEBUGGING FINAL UNTUK NPM BUILD ===
+# Jalankan build dan tangkap semua output ke log file, lalu tampilkan isinya jika gagal.
+# Ini akan memastikan kita melihat error yang sebenarnya sebelum build gagal total.
+RUN npm run build > build.log 2>&1 || (cat build.log && exit 1)
+# ==============================================================================
 
 # Copy & install backend dependencies
 COPY composer.json composer.lock ./
