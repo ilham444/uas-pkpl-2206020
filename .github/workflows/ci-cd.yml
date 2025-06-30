@@ -9,6 +9,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # Langkah 1: Checkout kode dari repositori
+      - name: Add swap space
+        uses: pierotofy/set-swap-space@master
+        with:
+          swap-size-gb: 10 # Alokasikan 10GB swap space
       - name: Checkout repository
         uses: actions/checkout@v3
 

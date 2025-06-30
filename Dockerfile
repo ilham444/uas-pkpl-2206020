@@ -8,26 +8,12 @@ WORKDIR /var/www/html
 
 # Install build-time system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    curl \
-    unzip \
-    zip \
-    # Dependensi untuk ekstensi PHP
-    libzip-dev \
-    libpng-dev \
-    libjpeg-dev \
-    libfreetype6-dev \
-    libgmp-dev \
-    # Instalasi Node.js LTS
-    ca-certificates \
-    gnupg \
+    build-essential curl unzip zip libzip-dev libpng-dev libjpeg-dev libfreetype6-dev libgmp-dev ca-certificates gnupg \
     && mkdir -p /etc/apt/keyrings \
     && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
     && NODE_MAJOR=18 \
     && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_MAJOR.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list \
-    && apt-get update \
-    && apt-get install -y nodejs \
-    && rm -rf /var/lib/apt/lists/*
+    && apt-get update && apt-get install -y nodejs && rm -rf /var/lib/apt/lists/*
 
 # Install PHP extensions
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
@@ -39,8 +25,8 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Copy & build frontend assets
 COPY package.json package-lock.json ./
 RUN npm ci
-# Jalankan build dengan opsi memori untuk keamanan
-RUN NODE_OPTIONS=--max-old-space-size=4096 npm run build
+# Jalankan build dengan opsi memori untuk keamanan ekstra
+RUN NODE_OPTIONS=--max-old-space-size=8192 npm run build
 
 # Copy & install backend dependencies
 COPY composer.json composer.lock ./
@@ -70,13 +56,7 @@ WORKDIR /var/www/html
 
 # Install only necessary RUNTIME system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    nginx \
-    # Library runtime yang dibutuhkan oleh ekstensi
-    libzip4 \
-    libpng16-16 \
-    libjpeg62-turbo \
-    libfreetype6 \
-    libgmp10 \
+    nginx libzip4 libpng16-16 libjpeg62-turbo libfreetype6 libgmp10 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy ekstensi PHP yang sudah dikompilasi dari builder stage
