@@ -5,6 +5,7 @@ FROM php:8.2-fpm-alpine AS builder
 WORKDIR /var/www/html
 
 # Install build-time system dependencies
+# Menggunakan versi LTS untuk Node.js agar lebih stabil dan dapat diprediksi
 RUN apk add --no-cache \
     build-base \
     curl \
@@ -16,7 +17,7 @@ RUN apk add --no-cache \
     jpeg-dev \
     freetype-dev \
     # Dependensi untuk Node.js & NPM
-    nodejs \
+    nodejs-lts \
     npm
 
 # Install PHP extensions
@@ -26,9 +27,16 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Copy & build frontend assets
+# === PERBAIKAN UTAMA UNTUK NPM ===
+# Copy file definisi dependensi frontend
 COPY package.json package-lock.json ./
-RUN NODE_OPTIONS=--max-old-space-size=4096 npm install && npm run build
+
+# Gunakan 'npm ci' untuk instalasi yang andal dan cepat di lingkungan CI
+RUN npm ci
+
+# Jalankan proses build di langkah terpisah untuk mendapatkan log error yang lebih baik
+# Opsi memori ditambahkan sebagai tindakan pencegahan
+RUN NODE_OPTIONS=--max-old-space-size=4096 npm run build
 
 # Copy & install backend dependencies
 COPY composer.json composer.lock ./
@@ -37,7 +45,7 @@ RUN composer install --no-interaction --no-plugins --no-scripts --prefer-dist --
 # Copy the rest of the application code
 COPY . .
 
-# Optimize Laravel
+# Optimize Laravel untuk production
 RUN composer dump-autoload --optimize && \
     php artisan optimize:clear && \
     php artisan config:cache && \
@@ -65,7 +73,6 @@ RUN apk add --no-cache \
     jpeg \
     freetype
 
-# === PERBAIKAN UTAMA DI SINI ===
 # Copy ekstensi PHP yang sudah dikompilasi dari builder stage
 COPY --from=builder /usr/local/etc/php/conf.d/ /usr/local/etc/php/conf.d/
 COPY --from=builder /usr/local/lib/php/extensions/ /usr/local/lib/php/extensions/
