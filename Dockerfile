@@ -7,6 +7,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 WORKDIR /var/www/html
 
 # Install build-time system dependencies
+# Termasuk cara standar untuk menginstal Node.js LTS di Debian
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     curl \
@@ -39,8 +40,13 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Copy & build frontend assets
 COPY package.json package-lock.json ./
 RUN npm ci
-# Jalankan build dengan opsi memori untuk keamanan
-RUN NODE_OPTIONS=--max-old-space-size=4096 npm run build
+
+# ==============================================================================
+# === METODE DEBUGGING AKTIF: TANGKAP PESAN ERROR NPM BUILD ===
+# Jalankan build dan tangkap semua output ke log file, lalu tampilkan isinya jika gagal.
+# Ini akan memastikan kita melihat error yang sebenarnya sebelum build gagal total.
+RUN npm run build > build.log 2>&1 || (cat build.log && exit 1)
+# ==============================================================================
 
 # Copy & install backend dependencies
 COPY composer.json composer.lock ./
