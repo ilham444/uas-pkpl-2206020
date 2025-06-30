@@ -7,7 +7,6 @@ ENV DEBIAN_FRONTEND=noninteractive
 WORKDIR /var/www/html
 
 # Install build-time system dependencies
-# Termasuk cara standar untuk menginstal Node.js LTS di Debian
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     curl \
@@ -30,7 +29,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-# Install PHP extensions (perintah ini sama persis)
+# Install PHP extensions
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j$(nproc) pdo pdo_mysql gd zip gmp bcmath opcache
 
@@ -40,13 +39,8 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Copy & build frontend assets
 COPY package.json package-lock.json ./
 RUN npm ci
-
-# ==============================================================================
-# === PERBAIKAN DEBUGGING FINAL UNTUK NPM BUILD ===
-# Jalankan build dan tangkap semua output ke log file, lalu tampilkan isinya jika gagal.
-# Ini akan memastikan kita melihat error yang sebenarnya sebelum build gagal total.
-RUN npm run build > build.log 2>&1 || (cat build.log && exit 1)
-# ==============================================================================
+# Jalankan build dengan opsi memori untuk keamanan
+RUN NODE_OPTIONS=--max-old-space-size=4096 npm run build
 
 # Copy & install backend dependencies
 COPY composer.json composer.lock ./
