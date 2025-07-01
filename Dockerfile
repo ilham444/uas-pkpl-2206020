@@ -22,32 +22,34 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# --- PERBAIKAN URUTAN DI SINI ---
-
-# 1. Copy package files terlebih dahulu untuk optimasi cache
+# Copy package files terlebih dahulu untuk optimasi cache
 COPY package.json package-lock.json ./
-
-# 2. Install dependensi Node.js
 RUN npm ci
 
-# 3. Copy SEMUA sisa file aplikasi (termasuk index.html, src, dll.)
+# Copy SEMUA sisa file aplikasi
 COPY . .
 
-# 4. Terima dan set environment variables untuk build
+# Terima dan set environment variables untuk build frontend
 ARG VITE_API_URL
 ARG VITE_APP_NAME
 ENV VITE_API_URL=$VITE_API_URL
 ENV VITE_APP_NAME=$VITE_APP_NAME
 
-# 5. SEKARANG jalankan build, karena semua file sudah ada
+# Jalankan build frontend
 RUN NODE_OPTIONS=--max-old-space-size=8192 npm run build
 
-# 6. Install dependensi backend (composer.json sudah tercopy di langkah "COPY . .")
+# Install dependensi backend
 RUN composer install --no-interaction --no-plugins --no-scripts --prefer-dist --optimize-autoloader
 
-# --- AKHIR PERBAIKAN URUTAN ---
+# --- PERBAIKAN FINAL UNTUK ARTISAN ---
+# 1. Buat file .env dari contoh agar Artisan tidak error karena koneksi DB
+RUN cp .env.example .env
 
-# Optimize Laravel untuk production
+# 2. Generate kunci aplikasi karena .env yang baru dibuat belum ada kuncinya
+RUN php artisan key:generate
+# --- AKHIR PERBAIKAN FINAL ---
+
+# SEKARANG, jalankan optimasi Laravel
 RUN php artisan optimize:clear && \
     php artisan config:cache && \
     php artisan route:cache && \
