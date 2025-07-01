@@ -26,66 +26,34 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 COPY package.json package-lock.json ./
 RUN npm ci
 
-# --- PERUBAHAN DI SINI ---
+# --- PERUBAHAN DEBUGGING DI SINI ---
 # Terima build arguments dari file workflow .yml
-# Pastikan nama ini SAMA PERSIS dengan yang ada di file .yml dan GitHub Secrets
 ARG VITE_API_URL
 ARG VITE_APP_NAME
 
-# Jadikan sebagai environment variable agar bisa dibaca oleh 'npm run build'
+# Jadikan sebagai environment variable
 ENV VITE_API_URL=$VITE_API_URL
 ENV VITE_APP_NAME=$VITE_APP_NAME
-# --- AKHIR PERUBAHAN ---
 
-# Jalankan build dengan opsi memori untuk keamanan ekstra
-RUN NODE_OPTIONS=--max-old-space-size=8192 npm run build
+# LANGKAH DEBUG #1: Cetak semua environment variable yang ada untuk verifikasi
+RUN echo "--- Printing Environment Variables ---" && printenv && echo "------------------------------------"
+
+# LANGKAH DEBUG #2: Jalankan build dengan flag --debug untuk output yang lebih detail
+# Tanda '--' di tengah penting untuk meneruskan flag ke vite, bukan ke npm
+RUN NODE_OPTIONS=--max-old-space-size=8192 npm run build -- --debug
+# --- AKHIR PERUBAHAN DEBUGGING ---
 
 # Copy & install backend dependencies
 COPY composer.json composer.lock ./
-RUN composer install --no-interaction --no-plugins --no-scripts --prefer-dist --optimize-autoloader
+# ... sisa file sengaja di-comment untuk mempercepat debug, kita bisa kembalikan nanti
+# RUN composer install --no-interaction --no-plugins --no-scripts --prefer-dist --optimize-autoloader
+# COPY . .
+# RUN composer dump-autoload --optimize && \
+#     php artisan optimize:clear && \
+#     php artisan config:cache && \
+#     php artisan route:cache && \
+#     php artisan view:cache
+# RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
-# Copy the rest of the application code
-COPY . .
-
-# Optimize Laravel untuk production
-RUN composer dump-autoload --optimize && \
-    php artisan optimize:clear && \
-    php artisan config:cache && \
-    php artisan route:cache && \
-    php artisan view:cache
-
-# Set permissions
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
-
-
-# -----------------------------------------------------------------------------
-
-# Stage 2: Final production image (Tetap menggunakan Debian)
-FROM php:8.2-fpm
-
-ENV DEBIAN_FRONTEND=noninteractive
-WORKDIR /var/www/html
-
-# Install only necessary RUNTIME system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    nginx libzip4 libpng16-16 libjpeg62-turbo libfreetype6 libgmp10 \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy ekstensi PHP yang sudah dikompilasi dari builder stage
-COPY --from=builder /usr/local/etc/php/conf.d/ /usr/local/etc/php/conf.d/
-COPY --from=builder /usr/local/lib/php/extensions/ /usr/local/lib/php/extensions/
-
-# Copy aplikasi yang sudah di-build dari builder stage
-COPY --from=builder /var/www/html .
-
-# Copy Nginx dan startup script configurations
-COPY .docker/nginx.conf /etc/nginx/sites-available/default
-COPY .docker/start.sh /usr/local/bin/start.sh
-RUN chmod +x /usr/local/bin/start.sh
-
-# Set permissions again for the final stage
-RUN chown -R www-data:www-data /var/w ww/html/storage /var/www/html/bootstrap/cache
-
-EXPOSE 80
-
-CMD ["start.sh"]
+# Untuk sementara, kita tidak perlu stage 2
+# [ ... Sisa Dockerfile di-comment out ... ]
