@@ -1,59 +1,38 @@
-name: Laravel CI/CD Workflow
+# Nama workflow
+name: Build and Deploy to Docker Hub
 
+# Kapan workflow ini dijalankan
 on:
   push:
-    branches: [ "main" ] # Workflow ini akan berjalan setiap ada push ke branch 'main'
+    branches:
+      - main  # Ganti ini jika branch utama Anda bukan 'main'
 
 jobs:
   build-and-deploy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest  # Jalankan di lingkungan Linux terbaru
+
     steps:
-      # Langkah 1: Checkout kode dari repositori
-      - name: Add swap space
-        uses: pierotofy/set-swap-space@master
-        with:
-          swap-size-gb: 10 # Alokasikan 10GB swap space
+      # Langkah 1: Checkout kode dari repositori Anda
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      # Langkah 2: Menjalankan Unit Test
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.2'
-      - name: Copy .env for testing
-        run: php -r "file_exists('.env') || copy('.env.example', '.env');"
-      - name: Install Composer Dependencies
-        run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
-      - name: Generate key
-        run: php artisan key:generate
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18' # atau '16', '20', sesuaikan dengan kebutuhan proyek Anda
-
-      - name: Install NPM Dependencies
-        run: npm install
-
-      - name: Build Assets with Vite
-        run: npm run build
-      - name: Run unit tests
-        env:
-          DB_CONNECTION: sqlite
-          DB_DATABASE: ':memory:'
-        run: php artisan test
-
-      # Langkah 3: Login ke Docker Hub
+      # Langkah 2: Login ke Docker Hub
       - name: Log in to Docker Hub
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # Langkah 4: Build dan Push Docker image ke Docker Hub
+      # Langkah 3: Build dan push image Docker
       - name: Build and push Docker image
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
-          context: .
-          push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/tugas444:latest 
+          context: .         # Konteks build adalah root direktori
+          push: true         # 'true' untuk langsung push ke Docker Hub
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/uas-pkpl-2206020:latest # GANTI DENGAN NAMA IMAGE ANDA
+          
+          # BAGIAN PALING PENTING: Meneruskan secrets sebagai argumen ke Docker build
+          build-args: |
+            VITE_API_URL=${{ secrets.VITE_API_URL }}
+            VITE_APP_NAME=${{ secrets.VITE_APP_NAME }}
+            # Tambahkan baris lain di sini jika ada secret tambahan
