@@ -25,6 +25,18 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Copy & build frontend assets
 COPY package.json package-lock.json ./
 RUN npm ci
+
+# --- PERUBAHAN DI SINI ---
+# Terima build arguments dari file workflow .yml
+# Pastikan nama ini SAMA PERSIS dengan yang ada di file .yml dan GitHub Secrets
+ARG VITE_API_URL
+ARG VITE_APP_NAME
+
+# Jadikan sebagai environment variable agar bisa dibaca oleh 'npm run build'
+ENV VITE_API_URL=$VITE_API_URL
+ENV VITE_APP_NAME=$VITE_APP_NAME
+# --- AKHIR PERUBAHAN ---
+
 # Jalankan build dengan opsi memori untuk keamanan ekstra
 RUN NODE_OPTIONS=--max-old-space-size=8192 npm run build
 
@@ -72,7 +84,7 @@ COPY .docker/start.sh /usr/local/bin/start.sh
 RUN chmod +x /usr/local/bin/start.sh
 
 # Set permissions again for the final stage
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+RUN chown -R www-data:www-data /var/w ww/html/storage /var/www/html/bootstrap/cache
 
 EXPOSE 80
 
