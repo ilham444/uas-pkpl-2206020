@@ -24,13 +24,19 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      # LANGKAH BARU: Mendapatkan 7 karakter pertama dari commit SHA
+      - name: Get short SHA
+        id: vars
+        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      # LANGKAH YANG DIMODIFIKASI: Build dan push dengan format tag baru
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
-          # INI BAGIAN YANG DIUBAH
           tags: |
             ilham111/uas-pkpl-2206020:latest
             ilham111/uas-pkpl-2206020:main
+            ilham111/uas-pkpl-2206020:${{ github.ref_name }}-${{ steps.vars.outputs.sha_short }}
